@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+/* Aviation-checklist instrument panel. Paper white, near-black ink, one amber
+   accent. No dark mode by design (see CLAUDE.md §3 Non-goals). */
+@theme {
+  --color-paper: #fbfaf7;
+  --color-panel: #ffffff;
+  --color-ink: #14140f;
+  --color-ink-muted: #56544c;
+  --color-ink-faint: #86837a;
+  --color-rule: #ddd9cf;
+  --color-rule-strong: #b9b4a6;
+  --color-amber: #b45309;
+  --color-amber-wash: #fdf6ec;
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", monospace;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+/* Every figure in the report is read in a column, so figures are tabular
+   everywhere rather than per-component. */
+.figure {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
