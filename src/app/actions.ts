@@ -2,6 +2,7 @@
 
 import { joinWaitlist } from "@/db/waitlist-store";
 import { toIsoDate } from "@/engine/calendar";
+import { explainReport } from "@/explainer/explain-report";
 import { buildReport } from "@/engine/report";
 import { isTradeAction, type Report, type SizingInputs } from "@/engine/types";
 import { resolveSnapshot } from "@/market/snapshot-source";
@@ -45,7 +46,11 @@ export async function createReport(
     sizing,
   });
 
-  return { ok: true, report, gateFailure: resolved.value.gateFailure };
+  return {
+    ok: true,
+    report: await explainReport(report),
+    gateFailure: resolved.value.gateFailure,
+  };
 }
 
 /** Reads a percentage field as a fraction, or null when left blank. */

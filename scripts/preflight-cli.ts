@@ -13,6 +13,7 @@ import { pathToFileURL } from "node:url";
 import { toIsoDate } from "@/engine/calendar";
 import { buildReport } from "@/engine/report";
 import { renderReportText } from "@/engine/report-text";
+import { explainReport } from "@/explainer/explain-report";
 import {
   isTradeAction,
   TRADE_ACTIONS,
@@ -165,12 +166,14 @@ async function main(): Promise<void> {
     console.error("Continuing in sample mode.\n");
   }
 
-  const report = buildReport({
-    snapshot: resolved.value.snapshot,
-    action: args.action,
-    today: args.today,
-    sizing: args.sizing,
-  });
+  const report = await explainReport(
+    buildReport({
+      snapshot: resolved.value.snapshot,
+      action: args.action,
+      today: args.today,
+      sizing: args.sizing,
+    }),
+  );
 
   if (args.json) {
     console.log(
