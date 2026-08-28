@@ -40,6 +40,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# preflight local sqlite
+# preflight local sqlite (including WAL sidecars)
 *.db
 *.db-journal
+*.db-wal
+*.db-shm
