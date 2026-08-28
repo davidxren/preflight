@@ -10,6 +10,8 @@ declare namespace NodeJS {
     PREFLIGHT_DB_PATH?: string;
     /** Overrides the gate G1 reachability probe, for exercising its failure. */
     PREFLIGHT_PROBE_URL?: string;
+    /** Price-history fallback credential (CLAUDE.md §9). */
+    TIINGO_API_KEY?: string;
     /** Options-chain fallback credential (CLAUDE.md §9). */
     TRADIER_SANDBOX_TOKEN?: string;
     /** Earnings-date fallback credential (CLAUDE.md §9). */

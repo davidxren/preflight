@@ -2,7 +2,7 @@ import { toIsoDate } from "@/engine/calendar";
 import { cacheKey, readCache, writeCache } from "@/db/response-cache";
 import { fetchFinnhubEarningsDate } from "./finnhub-source";
 import { failed, ok, type Fetched } from "./fetched";
-import { fetchStooqBars } from "./stooq-source";
+import { fetchTiingoBars } from "./tiingo-source";
 import { TRADIER_DELAY_NOTE, fetchTradierExpiries } from "./tradier-source";
 import type {
   MarketSnapshot,
@@ -60,12 +60,12 @@ export async function liveSnapshot(
   );
   let bars = barsPrimary.ok ? barsPrimary.value : [];
   if (!barsPrimary.ok) {
-    const fallback = await cached(cacheKey("stooq", symbol, "bars"), () =>
-      fetchStooqBars(symbol, historyFrom),
+    const fallback = await cached(cacheKey("tiingo", symbol, "bars"), () =>
+      fetchTiingoBars(symbol, historyFrom),
     );
     if (fallback.ok) {
       bars = fallback.value;
-      notes.push("Price history came from the Stooq fallback.");
+      notes.push("Price history came from the Tiingo fallback.");
     } else {
       unavailable.bars = bothFailed(barsPrimary.reason, fallback.reason);
     }

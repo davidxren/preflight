@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db } from "@/db/client";
 import { cacheKey, readCache, writeCache } from "@/db/response-cache";
 import { joinWaitlist } from "@/db/waitlist-store";
-import { parseStooqCsv, stooqUrl } from "@/market/stooq-source";
+import { parseTiingoBars, tiingoUrl } from "@/market/tiingo-source";
 import { sampleSnapshot } from "@/market/sample-source";
 import {
   GATE_G1_FAILED,
@@ -112,45 +112,72 @@ describe("waitlist", () => {
   });
 });
 
-describe("Stooq fallback", () => {
-  it("builds the documented url", () => {
-    expect(stooqUrl("AAPL")).toBe("https://stooq.com/q/d/l/?s=aapl.us&i=d");
+describe("Tiingo fallback", () => {
+  it("builds the daily-prices url without putting the key in the query string", () => {
+    const url = tiingoUrl("AAPL", "2016-08-29");
+    expect(url).toBe(
+      "https://api.tiingo.com/tiingo/daily/aapl/prices?" +
+        "startDate=2016-08-29&format=json&resampleFreq=daily",
+    );
+    expect(url).not.toMatch(/token/i);
   });
 
-  it("parses daily csv rows", () => {
-    const csv = [
-      "Date,Open,High,Low,Close,Volume",
-      "2026-08-27,1,2,0.5,1.5,100",
-      "2026-08-28,1.5,2.5,1,2,200",
-    ].join("\n");
-    const result = parseStooqCsv(csv, "2026-08-27");
-    expect(result.ok && result.value).toHaveLength(2);
+  it("parses daily rows", () => {
+    const result = parseTiingoBars(
+      [
+        { date: "2026-08-27T00:00:00.000Z", open: 1, high: 2, low: 0.5, close: 1.5, volume: 100 },
+        { date: "2026-08-28T00:00:00.000Z", open: 1.5, high: 2.5, low: 1, close: 2, volume: 200 },
+      ],
+      "2026-08-27",
+    );
+    expect(result.ok).toBe(true);
+    expect(result.ok && result.value).toEqual([
+      { date: "2026-08-27", open: 1, high: 2, low: 0.5, close: 1.5, volume: 100 },
+      { date: "2026-08-28", open: 1.5, high: 2.5, low: 1, close: 2, volume: 200 },
+    ]);
+  });
+
+  it("reads a UTC-midnight stamp as its own day", () => {
+    const result = parseTiingoBars(
+      [{ date: "2026-08-31T00:00:00.000Z", open: 1, high: 1, low: 1, close: 1, volume: 1 }],
+      "2026-01-01",
+    );
+    expect(result.ok && result.value[0].date).toBe("2026-08-31");
   });
 
   it("drops rows before the requested start date", () => {
-    const csv = [
-      "Date,Open,High,Low,Close,Volume",
-      "2015-01-02,1,2,0.5,1.5,100",
-      "2026-08-28,1.5,2.5,1,2,200",
-    ].join("\n");
-    const result = parseStooqCsv(csv, "2026-01-01");
-    expect(result.ok && result.value.map((b) => b.date)).toEqual(["2026-08-28"]);
+    const result = parseTiingoBars(
+      [
+        { date: "2015-01-02T00:00:00.000Z", open: 1, high: 2, low: 0.5, close: 1.5, volume: 100 },
+        { date: "2026-08-28T00:00:00.000Z", open: 1.5, high: 2.5, low: 1, close: 2, volume: 200 },
+      ],
+      "2026-01-01",
+    );
+    expect(result.ok && result.value.map((b: { date: string }) => b.date)).toEqual([
+      "2026-08-28",
+    ]);
   });
 
-  it("names the browser-verification challenge rather than parsing it", () => {
-    const result = parseStooqCsv(
-      '<!DOCTYPE html><html><body><script>verify()</script></body></html>',
+  it("drops a partial bar rather than patching it", () => {
+    const result = parseTiingoBars(
+      [{ date: "2026-08-28T00:00:00.000Z", open: 1, high: 2, low: 0.5, volume: 100 }],
       "2026-01-01",
     );
     expect(result.ok).toBe(false);
-    expect(result.ok === false && result.reason).toContain(
-      "browser-verification challenge",
-    );
   });
 
-  it("reports rather than invents when no row is usable", () => {
-    const csv = "Date,Open,High,Low,Close,Volume\n2026-08-28,x,y,z,w,v";
-    expect(parseStooqCsv(csv, "2026-01-01").ok).toBe(false);
+  it("reports rather than invents when the response is not a list", () => {
+    const result = parseTiingoBars({ detail: "Not authorized" }, "2026-01-01");
+    expect(result.ok).toBe(false);
+    expect(result.ok === false && result.reason).toContain("not a list");
+  });
+
+  it("names the missing key rather than failing silently", async () => {
+    delete process.env.TIINGO_API_KEY;
+    const { fetchTiingoBars } = await import("@/market/tiingo-source");
+    const result = await fetchTiingoBars("AAPL", "2026-01-01");
+    expect(result.ok).toBe(false);
+    expect(result.ok === false && result.reason).toContain("TIINGO_API_KEY");
   });
 });
 

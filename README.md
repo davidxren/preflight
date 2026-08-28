@@ -63,7 +63,7 @@ probes the primary source first; if it is unreachable the run prints
 
 | Need | Primary | Fallback |
 |---|---|---|
-| ~10y daily OHLC | yahoo-finance2 `.chart()` | Stooq CSV |
+| ~10y daily OHLC | yahoo-finance2 `.chart()` | Tiingo end-of-day (`TIINGO_API_KEY`) |
 | Options chain bid/ask | yahoo-finance2 `.options()` | Tradier sandbox (`TRADIER_SANDBOX_TOKEN`) |
 | Next earnings date | yahoo-finance2 `.quoteSummary()` | Finnhub (`FINNHUB_API_KEY`) |
 | Day gainers | yahoo-finance2 `.screener()` | none — renders `Data unavailable` |
@@ -71,10 +71,9 @@ probes the primary source first; if it is unreachable the run prints
 Successful live responses are cached in SQLite, because the primary source is
 unofficial, rate-limits, and depends on a token that expires within minutes.
 
-**Stooq note:** as of this build Stooq answers with a JavaScript
-browser-verification challenge rather than CSV. That is bot detection and is
-not worked around; the fallback reports it and the report says the data is
-unavailable.
+Every fallback is gated on its own key. With the key absent, the fallback
+reports that plainly and the report renders `Data unavailable` with the
+reason — it never substitutes a number of its own.
 
 ## Database
 
@@ -100,6 +99,7 @@ template is used and that is not an error.
 | `PREFLIGHT_DATA` | `live` opts into live data; anything else is sample mode |
 | `PREFLIGHT_DB_PATH` | SQLite file (default `./preflight.db`) |
 | `PREFLIGHT_PROBE_URL` | Overrides the gate G1 probe, to exercise its failure path |
+| `TIINGO_API_KEY` | Price-history fallback |
 | `TRADIER_SANDBOX_TOKEN` | Options fallback |
 | `FINNHUB_API_KEY` | Earnings fallback |
 | `ANTHROPIC_API_KEY` | Enables the explainer |
