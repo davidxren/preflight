@@ -26,10 +26,11 @@ export const CITATIONS: Readonly<Record<1 | 2 | 3 | 4, string>> = {
 } as const;
 
 /**
- * Checks 5 and 6 report the ticker's own history and a published government
- * calendar, so neither carries one of the four fixed citations. Their sources
- * are named inline instead.
+ * Checks 5 and 6 measure this ticker's own history and a published government
+ * calendar rather than a finding from the literature, so §5 gives them no
+ * fixed citation. They name their own source instead, and every check on the
+ * report therefore prints where its numbers came from.
  */
 export const PATTERN_SOURCE_NOTE: string =
-  "Base rates are computed from this ticker's own daily closes in the loaded " +
-  "price history. No external study is cited for this check.";
+  "Source: this ticker's own daily closes in the loaded price history. Base " +
+  "rates are computed here, not quoted from a study.";

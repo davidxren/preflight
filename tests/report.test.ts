@@ -62,6 +62,17 @@ describe("report", () => {
     expect(report.checks[3].citation).toBe(CITATIONS[4]);
   });
 
+  it("gives every one of the six checks a source, not only the cited four", () => {
+    const report = buildReport({
+      snapshot: fixture("AAPL"),
+      action: "buy call",
+      today: TODAY,
+    });
+    for (const check of report.checks) {
+      expect(check.citation.length).toBeGreaterThan(0);
+    }
+  });
+
   it("quotes each citation's headline finding verbatim", () => {
     expect(CITATIONS[1]).toContain(
       "Retail losses of 5-to-9% on average, and 10-to-14% for high expected volatility announcements.",

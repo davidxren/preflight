@@ -99,9 +99,10 @@ export function checkMacroProximity(today: string): CheckResult {
     notes: [
       "Release times are 8:30 a.m. ET for BLS releases and 2:00 p.m. ET for " +
         "the FOMC decision. Trading days exclude weekends and NYSE holidays.",
-      `Sources: FOMC ${MACRO_SOURCE_URLS.fomc}; CPI ${MACRO_SOURCE_URLS.cpi}; ` +
-        `jobs ${MACRO_SOURCE_URLS.jobs}.`,
+      "This calendar is embedded in the app and is never fetched at run time.",
     ],
-    citation: "",
+    citation:
+      `Sources: FOMC ${MACRO_SOURCE_URLS.fomc}; CPI ${MACRO_SOURCE_URLS.cpi}; ` +
+      `jobs ${MACRO_SOURCE_URLS.jobs}.`,
   };
 }

@@ -213,7 +213,10 @@ describe("check 6 — macro-event proximity", () => {
     expect(check.summary).toContain("embedded macro calendar ends");
   });
 
-  it("names the published sources", () => {
-    expect(checkMacroProximity(TODAY).notes.join(" ")).toContain("federalreserve.gov");
+  it("names the published sources in its citation", () => {
+    const citation = checkMacroProximity(TODAY).citation;
+    expect(citation).toContain("federalreserve.gov");
+    expect(citation).toContain("bls.gov/schedule/news_release/cpi.htm");
+    expect(citation).toContain("bls.gov/schedule/news_release/empsit.htm");
   });
 });

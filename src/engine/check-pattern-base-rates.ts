@@ -93,7 +93,7 @@ export function patternBaseRates(bars: readonly DailyBar[]): PatternBaseRate[] {
 }
 
 export function checkPatternBaseRates(snapshot: MarketSnapshot): CheckResult {
-  const notes: string[] = [PATTERN_SOURCE_NOTE];
+  const notes: string[] = [];
   const bars = snapshot.bars;
 
   if (bars.length < 41) {
@@ -107,7 +107,7 @@ export function checkPatternBaseRates(snapshot: MarketSnapshot): CheckResult {
       summary: "Pattern base rates could not be computed.",
       figures: PATTERN_DETECTORS.map((d) => unavailable(d.label, reason)),
       notes,
-      citation: "",
+      citation: PATTERN_SOURCE_NOTE,
     };
   }
 
@@ -168,6 +168,6 @@ export function checkPatternBaseRates(snapshot: MarketSnapshot): CheckResult {
       `from ${firstBar} to ${lastBar}, each against the unconditional base rate.`,
     figures,
     notes,
-    citation: "",
+    citation: PATTERN_SOURCE_NOTE,
   };
 }
