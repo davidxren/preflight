@@ -81,8 +81,10 @@ reason — it never substitutes a number of its own.
 npm run db:migrate
 ```
 
-Two tables: `cache` (live responses) and `waitlist` (emails). User-entered
-sizing numbers are never written anywhere.
+Three tables: `cache` (live responses), `waitlist` (emails), and `predictions`
+(calibration practice — an anonymous cookie id, the forecast, and its outcome).
+User-entered sizing numbers are never written anywhere, and no table links a
+row to a person.
 
 ## Explainer (optional)
 

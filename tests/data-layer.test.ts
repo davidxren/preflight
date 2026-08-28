@@ -29,13 +29,15 @@ afterAll(() => {
 });
 
 describe("migrations", () => {
-  it("creates exactly the cache and waitlist tables", () => {
+  it("creates exactly the three permitted tables", () => {
     const tables = db()
       .$client.prepare(
         "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '__drizzle%' ORDER BY name",
       )
       .all() as { name: string }[];
-    expect(tables.map((t) => t.name)).toEqual(["cache", "waitlist"]);
+    // CLAUDE.md §10, amended by the owner from two tables to exactly three:
+    // cache, waitlist, and predictions (calibration practice mode).
+    expect(tables.map((t) => t.name)).toEqual(["cache", "predictions", "waitlist"]);
   });
 });
 

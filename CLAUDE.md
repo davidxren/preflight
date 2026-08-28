@@ -60,6 +60,20 @@ in the check-4 sizing calculator), "AI-powered predictions",
 5. Honest pattern base rates from ~10y daily OHLC (five hand-rolled detectors).
 6. Macro-event proximity (FOMC/CPI/jobs within 3 trading days, embedded data).
 
+## Owner amendments to the contract
+
+These were ruled by the owner and override the original spec.
+
+1. **Persistence is exactly three tables** (was two): `cache`, `waitlist`,
+   `predictions`. `predictions` may store only: id, anonymous cookie id,
+   ticker, predicted direction, confidence, created_at, resolve-after date,
+   resolved outcome, and Brier components. No emails, no sizing inputs,
+   nothing else. A test asserts the table list and the column list.
+2. **Stooq is removed from the OHLC fallback slot.** The price-history
+   fallback is Tiingo end-of-day, gated on `TIINGO_API_KEY`, with the same
+   try/one-retry/cache rules and the same honest failure reporting. With no
+   key the behaviour is `Data unavailable` plus the reason.
+
 ## Ask-vs-decide
 
 Decide small implementation details; log every decision. STOP and ask before:

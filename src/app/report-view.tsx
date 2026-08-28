@@ -1,3 +1,4 @@
+import { CalibrationPanel } from "./calibration-panel";
 import { CheckCard } from "./check-card";
 import { DATA_UNAVAILABLE } from "@/engine/disclaimer";
 import type { Report } from "@/engine/types";
@@ -67,6 +68,8 @@ export function ReportView({
             : ""}
         </p>
       </section>
+
+      <CalibrationPanel symbol={report.symbol} asOf={report.asOf} />
     </section>
   );
 }

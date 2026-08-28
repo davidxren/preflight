@@ -105,6 +105,13 @@ export function nextTradingDay(date: string): string {
   return cursor;
 }
 
+/** The date `sessions` trading days after `from`. `sessions` must be positive. */
+export function addTradingSessions(from: string, sessions: number): string {
+  let cursor = from;
+  for (let i = 0; i < sessions; i += 1) cursor = nextTradingDay(cursor);
+  return cursor;
+}
+
 /**
  * Trading sessions strictly after `from` up to and including `target`.
  * 1 means "the next session". Returns null when `target` is not after `from`,
