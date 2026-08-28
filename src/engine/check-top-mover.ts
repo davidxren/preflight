@@ -96,7 +96,7 @@ export function checkTopMover(snapshot: MarketSnapshot): CheckResult {
   if (signals.twentyDayPercentile !== null && signals.twentyDayReturn !== null) {
     figures.push(
       figure(
-        "That 20-session return, as a percentile of its own history",
+        "Trailing 20-session return, percentile rank",
         formatPercent(signals.twentyDayPercentile, 1),
         signals.twentyDayPercentile,
       ),
@@ -113,7 +113,7 @@ export function checkTopMover(snapshot: MarketSnapshot): CheckResult {
   } else {
     figures.push(
       unavailable(
-        "That 20-session return, as a percentile of its own history",
+        "Trailing 20-session return, percentile rank",
         "The loaded history has too few bars to rank a 20-session return.",
       ),
     );

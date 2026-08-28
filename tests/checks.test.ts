@@ -94,7 +94,7 @@ describe("check 3 — top mover and run-up", () => {
 
   it("ranks the trailing 20-session return against its own history", () => {
     const check = checkTopMover(fixture("NVDA"));
-    const pct = check.figures.find((f) => f.label.includes("percentile of its own"));
+    const pct = check.figures.find((f) => f.label.includes("percentile rank"));
     expect(pct?.numeric).toBeGreaterThanOrEqual(0);
     expect(pct?.numeric).toBeLessThanOrEqual(100);
   });
