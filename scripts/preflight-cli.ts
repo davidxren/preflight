@@ -10,7 +10,7 @@ import { toIsoDate } from "@/engine/calendar";
 import { buildReport } from "@/engine/report";
 import { renderReportText } from "@/engine/report-text";
 import { isTradeAction, TRADE_ACTIONS, type TradeAction } from "@/engine/types";
-import { dataMode, resolveSnapshot } from "@/market/snapshot-source";
+import { GATE_G1_FAILED, dataMode, resolveSnapshot } from "@/market/snapshot-source";
 
 interface CliArgs {
   symbol: string;
@@ -46,14 +46,21 @@ function parseArgs(argv: readonly string[]): CliArgs {
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
-  const snapshot = await resolveSnapshot(args.symbol, dataMode());
-  if (!snapshot.ok) {
-    console.error(snapshot.reason);
+  const resolved = await resolveSnapshot(args.symbol, dataMode());
+  if (!resolved.ok) {
+    console.error(resolved.reason);
     process.exitCode = 1;
     return;
   }
+  // Gate G1: the exact line is part of the contract, so it is printed before
+  // anything else and the run continues on sample data.
+  if (resolved.value.gateFailure) {
+    console.error(GATE_G1_FAILED);
+    console.error(`Reason: ${resolved.value.gateFailure}`);
+    console.error("Continuing in sample mode.\n");
+  }
   const report = buildReport({
-    snapshot: snapshot.value,
+    snapshot: resolved.value.snapshot,
     action: args.action,
     today: args.today,
   });

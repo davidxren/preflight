@@ -18,7 +18,7 @@ export interface ReportRequest {
 }
 
 export type ReportResponse =
-  | { ok: true; report: Report }
+  | { ok: true; report: Report; gateFailure?: string }
   | { ok: false; error: string };
 
 /** Tickers are 1-6 letters, optionally with a class suffix such as BRK.B. */
@@ -40,16 +40,17 @@ export async function createReport({
     };
   }
 
-  const snapshot = await resolveSnapshot(ticker);
-  if (!snapshot.ok) return { ok: false, error: snapshot.reason };
+  const resolved = await resolveSnapshot(ticker);
+  if (!resolved.ok) return { ok: false, error: resolved.reason };
 
   return {
     ok: true,
     report: buildReport({
-      snapshot: snapshot.value,
+      snapshot: resolved.value.snapshot,
       action,
       today: toIsoDate(new Date()),
       sizing,
     }),
+    gateFailure: resolved.value.gateFailure,
   };
 }
