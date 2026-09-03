@@ -92,6 +92,17 @@ These were ruled by the owner and override the original spec.
    page-level disclaimer assertion and the server-action tests. Scope is
    exactly those tests: no snapshot tests and no component-by-component
    coverage.
+5. **Check 5 reports uncertainty.** This is the only sanctioned change to
+   check 5's output; the five detector definitions stay verbatim. Every
+   median and every difference against the unconditional median carries a
+   95% interval from a stationary block bootstrap (Politis & Romano 1994)
+   over relative bars — geometric blocks averaging 20 sessions, 2,000
+   resamples, fixed seed. Alongside N, each horizon shows the count of
+   non-overlapping occurrences, and the small-sample warning keys off that
+   count rather than N. The ten statistics per ticker carry a
+   Benjamini-Hochberg adjustment at a 5% false-discovery rate, disclosed in
+   one sentence. Where the pattern is absent from more than 5% of resamples,
+   both intervals render `Data unavailable` with that reason.
 
 ## Ask-vs-decide
 

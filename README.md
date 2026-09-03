@@ -27,12 +27,33 @@ committed snapshots for AAPL, NVDA, SPY, and TSLA.
 | 2 | Options bid-ask spread drag | (ask − bid) ÷ mid for the contract the action implies |
 | 3 | Top mover and run-up | On the day-gainers screen; trailing returns and their percentile rank |
 | 4 | Position sizing and risk of ruin | Kelly fraction; seeded Monte Carlo over 10,000 paths of 50 trades |
-| 5 | Pattern base rates | Five hand-rolled detectors over ~10y of daily bars, against the unconditional baseline |
+| 5 | Pattern base rates | Five hand-rolled detectors over ~10y of daily bars, against the unconditional baseline, each with a bootstrap interval |
 | 6 | Macro-event proximity | FOMC / CPI / jobs releases within 3 NYSE trading days |
 
 Checks 1–4 carry a fixed citation from the literature. Checks 5 and 6 measure
 this ticker's own history and a published government calendar, and name those
 sources instead.
+
+### Reading check 5
+
+Pattern statistics are easy to over-read, so check 5 states its own
+uncertainty:
+
+- Every median and every difference against the unconditional median carries a
+  95% interval — the 2.5th and 97.5th percentiles over 2,000 stationary
+  block-bootstrap resamples of the series (geometric blocks averaging 20
+  sessions), rebuilt into a price path and re-measured with the same detectors.
+- Alongside N, each horizon shows how many occurrences are **non-overlapping**.
+  Two triggers a few sessions apart share most of a 20-session outcome, so N
+  overstates how many independent observations there are. The small-sample
+  warning keys off the non-overlapping count.
+- Ten statistics are computed per ticker — five detectors at two horizons — so
+  they carry a Benjamini–Hochberg adjustment at a 5% false-discovery rate,
+  reported in one sentence. It describes the sample and says nothing about
+  what happens next.
+- Where the pattern is absent from more than 5% of resamples, both intervals
+  render `Data unavailable` with that reason rather than describing only the
+  resamples that happened to contain it.
 
 ## Command line
 
