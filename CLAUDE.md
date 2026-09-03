@@ -65,14 +65,33 @@ in the check-4 sizing calculator), "AI-powered predictions",
 These were ruled by the owner and override the original spec.
 
 1. **Persistence is exactly three tables** (was two): `cache`, `waitlist`,
-   `predictions`. `predictions` may store only: id, anonymous cookie id,
-   ticker, predicted direction, confidence, created_at, resolve-after date,
-   resolved outcome, and Brier components. No emails, no sizing inputs,
-   nothing else. A test asserts the table list and the column list.
+   `predictions`. `predictions` may hold exactly these nine columns and
+   nothing else (amendment 3 fixes the list to these literal names):
+
+       base_close, confidence, created_at, direction, id,
+       outcome, resolve_after, symbol, visitor_id
+
+   No emails, no sizing inputs, nothing else. A test asserts the table list,
+   and asserts the column list against this literal enumeration.
 2. **Stooq is removed from the OHLC fallback slot.** The price-history
    fallback is Tiingo end-of-day, gated on `TIINGO_API_KEY`, with the same
    try/one-retry/cache rules and the same honest failure reporting. With no
    key the behaviour is `Data unavailable` plus the reason.
+3. **`base_close` is a permitted column and the column list is pinned
+   literally.** `base_close` is a public market price and the reference a
+   forecast is settled against; calibration mode cannot resolve without it,
+   and it is not personal data. Amendment 1's enumeration above is the
+   contract, copied verbatim into `tests/calibration.test.ts`; the test
+   compares the live schema against that literal list rather than against a
+   list read back from the implemented schema, so schema drift fails the
+   test. This corrects a test by owner ruling; it does not weaken one.
+   (The ruling was issued as "ten columns" on the strength of a miscount in
+   the session-1 state report. The table has nine columns; `base_close` is
+   one of the nine, not a tenth. The substance of the ruling is unchanged.)
+4. **One DOM test environment is approved**, devDependency only, for the
+   page-level disclaimer assertion and the server-action tests. Scope is
+   exactly those tests: no snapshot tests and no component-by-component
+   coverage.
 
 ## Ask-vs-decide
 

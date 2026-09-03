@@ -14,6 +14,25 @@ import { db } from "@/db/client";
 import { addTradingSessions } from "@/engine/trading-calendar";
 import type { DailyBar } from "@/market/types";
 
+/**
+ * Copied verbatim from CLAUDE.md, owner amendment 1 as fixed by amendment 3.
+ * This is the contract, not a reading of the implemented schema: comparing the
+ * live table against a list transcribed from the amendment is what lets the
+ * assertion catch schema drift in either direction. Sorted so the comparison
+ * does not depend on declaration order.
+ */
+const PERMITTED_PREDICTION_COLUMNS = [
+  "base_close",
+  "confidence",
+  "created_at",
+  "direction",
+  "id",
+  "outcome",
+  "resolve_after",
+  "symbol",
+  "visitor_id",
+];
+
 let dir: string;
 
 beforeAll(() => {
@@ -147,21 +166,11 @@ describe("lazy resolution", () => {
     expect(resolveAndSummarize("visitor-d", "TEST", bars).pending).toBe(1);
   });
 
-  it("stores only the fields the amended persistence rule permits", () => {
+  it("stores only the columns the amended persistence rule permits", () => {
     const columns = db().$client.prepare("PRAGMA table_info(predictions)").all() as {
       name: string;
     }[];
-    expect(columns.map((c) => c.name).sort()).toEqual([
-      "base_close",
-      "confidence",
-      "created_at",
-      "direction",
-      "id",
-      "outcome",
-      "resolve_after",
-      "symbol",
-      "visitor_id",
-    ]);
+    expect(columns.map((c) => c.name).sort()).toEqual(PERMITTED_PREDICTION_COLUMNS);
   });
 });
 
