@@ -69,7 +69,14 @@ probes the primary source first; if it is unreachable the run prints
 | Day gainers | yahoo-finance2 `.screener()` | none — renders `Data unavailable` |
 
 Successful live responses are cached in SQLite, because the primary source is
-unofficial, rate-limits, and depends on a token that expires within minutes.
+unofficial, rate-limits, and depends on a token that expires within minutes. A
+cache that cannot be read or written (an unmigrated database, say) degrades to
+a miss and the run continues on the live fetch.
+
+Every outbound call is bounded: 10 seconds per attempt, and one retry doubles
+that at most. The explainer call is bounded at 20 seconds. A call that exceeds
+its bound renders `Data unavailable` with the timeout as the reason — it never
+hangs the report.
 
 Every fallback is gated on its own key. With the key absent, the fallback
 reports that plainly and the report renders `Data unavailable` with the
@@ -119,3 +126,12 @@ npm run build
 Fixtures are captured snapshots, regenerated with
 `npx tsx scripts/build-fixtures.ts`. The committed JSON is what sample mode
 reads; the app itself never calls the network in sample mode.
+
+```bash
+npm run capture:live
+```
+
+captures raw upstream responses into `tests/fixtures/live/`, which the parser
+tests read. It writes only what the source actually returns: a path that fails
+is reported and left uncaptured rather than synthesised. Key-shaped fields are
+replaced with `[scrubbed]` before anything is written.

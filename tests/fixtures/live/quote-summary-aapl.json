@@ -1,0 +1,30 @@
+{
+  "capture": {
+    "call": "quoteSummary(\"AAPL\", { modules: [\"calendarEvents\"] })",
+    "capturedAt": "2026-09-03T20:25:35.482Z",
+    "note": "Equity with a scheduled earnings date.",
+    "scrubbed": "keys matching /token|secret|password|auth|crumb|cookie|apikey|api_key/i are replaced with \"[scrubbed]\""
+  },
+  "response": {
+    "calendarEvents": {
+      "maxAge": 1,
+      "earnings": {
+        "earningsDate": [
+          "2026-10-29T20:00:00.000Z"
+        ],
+        "earningsCallDate": [
+          "2026-07-30T20:00:00.000Z"
+        ],
+        "isEarningsDateEstimate": false,
+        "earningsAverage": 1.98013,
+        "earningsLow": 1.93,
+        "earningsHigh": 2.07,
+        "revenueAverage": 113563145910,
+        "revenueLow": 112137000000,
+        "revenueHigh": 117219700000
+      },
+      "exDividendDate": "2026-08-10T00:00:00.000Z",
+      "dividendDate": "2026-08-13T00:00:00.000Z"
+    }
+  }
+}

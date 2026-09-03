@@ -10,7 +10,8 @@
     "test": "vitest run",
     "cli": "tsx scripts/preflight-cli.ts",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx scripts/migrate.ts"
+    "db:migrate": "tsx scripts/migrate.ts",
+    "capture:live": "tsx scripts/capture-live-fixtures.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.122.0",

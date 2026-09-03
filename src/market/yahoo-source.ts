@@ -1,13 +1,33 @@
 import YahooFinance from "yahoo-finance2";
-import { toIsoDate, toUtcIsoDate } from "@/engine/calendar";
-import { failed, ok, reasonFrom, withOneRetry, type Fetched } from "./fetched";
-import type { DailyBar, OptionExpirySnapshot, OptionQuote } from "./types";
+import {
+  failed,
+  ok,
+  reasonFrom,
+  withOneRetry,
+  withTimeout,
+  type Fetched,
+} from "./fetched";
+import {
+  parseChainSnapshot,
+  parseChartBars,
+  parseDayGainers,
+  parseNextEarningsDate,
+  parseSpotQuote,
+  parseUpcomingExpiries,
+  type EarningsDate,
+  type SpotQuote,
+} from "./yahoo-parsers";
+import type { DailyBar, OptionExpirySnapshot } from "./types";
 
 /**
  * Primary keyless source. yahoo-finance2 is unofficial: it depends on a
  * crumb/cookie that can expire within ~10-20 minutes and it rate-limits, so
- * every call retries once and then reports a reason rather than throwing.
+ * every call is bounded, retries once, and then reports a reason rather than
+ * throwing. Parsing lives in `yahoo-parsers.ts` so the captured responses in
+ * `tests/fixtures/live/` cover it without a network call.
  */
+
+export type { EarningsDate, SpotQuote };
 
 let client: InstanceType<typeof YahooFinance> | null = null;
 
@@ -21,13 +41,15 @@ function warn(context: string, error: unknown): void {
   console.warn(`[preflight] retrying ${context}: ${reasonFrom(error, "cause")}`);
 }
 
-/** Feed values carry float32 noise (188.44000244…); 4dp is the real precision. */
-function round4(value: number): number {
-  return Math.round(value * 10_000) / 10_000;
-}
-
-function finite(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
+/**
+ * The library takes no AbortSignal, so each attempt is bounded here (v1.1 hard
+ * rule 12) and `withOneRetry` doubles that bound at most.
+ */
+function bounded<T>(label: string, call: () => Promise<T>): Promise<T> {
+  return withOneRetry(
+    () => withTimeout(label, call),
+    (error) => warn(label, error),
+  );
 }
 
 export async function fetchDailyBars(
@@ -35,34 +57,10 @@ export async function fetchDailyBars(
   fromIsoDate: string,
 ): Promise<Fetched<DailyBar[]>> {
   try {
-    const chart = await withOneRetry(
-      () =>
-        yahoo().chart(symbol, {
-          period1: fromIsoDate,
-          interval: "1d",
-        }),
-      (error) => warn(`chart(${symbol})`, error),
+    const chart = await bounded(`chart(${symbol})`, () =>
+      yahoo().chart(symbol, { period1: fromIsoDate, interval: "1d" }),
     );
-    const bars: DailyBar[] = [];
-    for (const q of chart.quotes) {
-      const open = finite(q.open);
-      const high = finite(q.high);
-      const low = finite(q.low);
-      const close = finite(q.close);
-      // Yahoo emits null OHLC for halted sessions; a partial bar cannot be
-      // repaired without inventing numbers, so it is dropped entirely.
-      if (open === null || high === null || low === null || close === null) {
-        continue;
-      }
-      bars.push({
-        date: toIsoDate(new Date(q.date)),
-        open: round4(open),
-        high: round4(high),
-        low: round4(low),
-        close: round4(close),
-        volume: finite(q.volume) ?? 0,
-      });
-    }
+    const bars = parseChartBars(chart);
     if (bars.length === 0) return failed("Yahoo chart returned no usable bars");
     return ok(bars);
   } catch (error) {
@@ -70,67 +68,17 @@ export async function fetchDailyBars(
   }
 }
 
-export interface SpotQuote {
-  price: number;
-  /** "EQUITY", "ETF", "INDEX", …; drives whether earnings are even expected. */
-  instrumentType: string | null;
-}
-
 export async function fetchSpot(symbol: string): Promise<Fetched<SpotQuote>> {
   try {
-    const quote = await withOneRetry(
-      () => yahoo().quote(symbol),
-      (error) => warn(`quote(${symbol})`, error),
-    );
-    const price = finite(quote?.regularMarketPrice);
-    if (price === null) return failed("Yahoo quote carried no market price");
-    return ok({
-      price: round4(price),
-      instrumentType: quote?.quoteType ?? null,
-    });
+    const quote = await bounded(`quote(${symbol})`, () => yahoo().quote(symbol));
+    const parsed = parseSpotQuote(quote);
+    if (parsed === null) return failed("Yahoo quote carried no market price");
+    return ok(parsed);
   } catch (error) {
     return failed(reasonFrom(error, "Yahoo quote unavailable"));
   }
 }
 
-interface RawContract {
-  strike: number;
-  bid?: number;
-  ask?: number;
-  lastPrice?: number;
-}
-
-function toQuote(contract: RawContract): OptionQuote {
-  return {
-    strike: contract.strike,
-    bid: finite(contract.bid),
-    ask: finite(contract.ask),
-    lastPrice: finite(contract.lastPrice),
-  };
-}
-
-/** The strike nearest `spot` that is quoted on both sides of the chain. */
-function atmPair(
-  calls: RawContract[],
-  puts: RawContract[],
-  spot: number,
-): { call: RawContract; put: RawContract } | null {
-  const putsByStrike = new Map(puts.map((p) => [p.strike, p]));
-  let best: { call: RawContract; put: RawContract; gap: number } | null = null;
-  for (const call of calls) {
-    const put = putsByStrike.get(call.strike);
-    if (!put) continue;
-    const gap = Math.abs(call.strike - spot);
-    if (!best || gap < best.gap) best = { call, put, gap };
-  }
-  return best ? { call: best.call, put: best.put } : null;
-}
-
-/**
- * The nearest `count` expiries strictly after `asOf`. An expiry on `asOf`
- * itself settles at that day's close, so its straddle no longer prices a
- * forward move and would understate the implied move.
- */
 export async function fetchOptionExpiries(
   symbol: string,
   asOf: string,
@@ -138,38 +86,19 @@ export async function fetchOptionExpiries(
   count: number = 2,
 ): Promise<Fetched<OptionExpirySnapshot[]>> {
   try {
-    const first = await withOneRetry(
-      () => yahoo().options(symbol),
-      (error) => warn(`options(${symbol})`, error),
-    );
-    const upcoming = (first.expirationDates ?? [])
-      .map((d: Date) => toUtcIsoDate(new Date(d)))
-      .filter((d: string) => d > asOf)
-      .slice(0, count);
+    const first = await bounded(`options(${symbol})`, () => yahoo().options(symbol));
+    const upcoming = parseUpcomingExpiries(first, asOf, count);
     if (upcoming.length === 0) {
       return failed(`Yahoo listed no option expiry after ${asOf}`);
     }
 
     const snapshots: OptionExpirySnapshot[] = [];
     for (const expiry of upcoming) {
-      const chain = await withOneRetry(
-        () => yahoo().options(symbol, { date: new Date(`${expiry}T00:00:00Z`) }),
-        (error) => warn(`options(${symbol}, ${expiry})`, error),
+      const chain = await bounded(`options(${symbol}, ${expiry})`, () =>
+        yahoo().options(symbol, { date: new Date(`${expiry}T00:00:00Z`) }),
       );
-      const leg = chain.options?.[0];
-      if (!leg) continue;
-      const pair = atmPair(
-        (leg.calls ?? []) as RawContract[],
-        (leg.puts ?? []) as RawContract[],
-        spot,
-      );
-      if (!pair) continue;
-      snapshots.push({
-        expiry,
-        atmStrike: pair.call.strike,
-        call: toQuote(pair.call),
-        put: toQuote(pair.put),
-      });
+      const snapshot = parseChainSnapshot(chain, expiry, spot);
+      if (snapshot) snapshots.push(snapshot);
     }
     if (snapshots.length === 0) {
       return failed("Yahoo option chains carried no matched call/put strike");
@@ -180,32 +109,17 @@ export async function fetchOptionExpiries(
   }
 }
 
-export interface EarningsDate {
-  date: string;
-  isEstimate: boolean;
-}
-
 export async function fetchNextEarningsDate(
   symbol: string,
   asOf: string,
 ): Promise<Fetched<EarningsDate>> {
   try {
-    const summary = await withOneRetry(
-      () => yahoo().quoteSummary(symbol, { modules: ["calendarEvents"] }),
-      (error) => warn(`quoteSummary(${symbol})`, error),
+    const summary = await bounded(`quoteSummary(${symbol})`, () =>
+      yahoo().quoteSummary(symbol, { modules: ["calendarEvents"] }),
     );
-    const earnings = summary.calendarEvents?.earnings;
-    const upcoming = (earnings?.earningsDate ?? [])
-      .map((d) => toIsoDate(new Date(d)))
-      .filter((d) => d >= asOf)
-      .sort();
-    if (upcoming.length === 0) {
-      return failed("Yahoo listed no upcoming earnings date");
-    }
-    return ok({
-      date: upcoming[0],
-      isEstimate: earnings?.isEarningsDateEstimate === true,
-    });
+    const parsed = parseNextEarningsDate(summary, asOf);
+    if (parsed === null) return failed("Yahoo listed no upcoming earnings date");
+    return ok(parsed);
   } catch (error) {
     return failed(reasonFrom(error, "Yahoo earnings calendar unavailable"));
   }
@@ -215,13 +129,10 @@ export async function fetchDayGainers(
   count: number = 25,
 ): Promise<Fetched<string[]>> {
   try {
-    const screen = await withOneRetry(
-      () => yahoo().screener({ scrIds: "day_gainers", count }),
-      (error) => warn("screener(day_gainers)", error),
+    const screen = await bounded("screener(day_gainers)", () =>
+      yahoo().screener({ scrIds: "day_gainers", count }),
     );
-    const symbols = (screen.quotes ?? [])
-      .map((q) => q.symbol)
-      .filter((s): s is string => typeof s === "string");
+    const symbols = parseDayGainers(screen);
     if (symbols.length === 0) return failed("Yahoo day-gainers screen was empty");
     return ok(symbols);
   } catch (error) {

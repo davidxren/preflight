@@ -35,3 +35,40 @@ export async function withOneRetry<T>(
     return await attempt();
   }
 }
+
+/** Owner default for a single outbound attempt (v1.1 contract, D1). */
+export const ATTEMPT_TIMEOUT_MS = 10_000;
+
+export class TimeoutError extends Error {
+  constructor(label: string, ms: number) {
+    super(`${label} exceeded its ${ms} ms timeout`);
+    this.name = "TimeoutError";
+  }
+}
+
+/**
+ * Bounds one attempt (v1.1 hard rule 12). Libraries that take no AbortSignal —
+ * yahoo-finance2 among them — can otherwise hang a request indefinitely, and
+ * `withOneRetry` would double that wait. The underlying promise is abandoned
+ * rather than cancelled: it cannot be cancelled through this interface, so the
+ * timeout bounds what the caller waits for, not what the library is doing.
+ */
+export async function withTimeout<T>(
+  label: string,
+  attempt: () => Promise<T>,
+  ms: number = ATTEMPT_TIMEOUT_MS,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      attempt(),
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => reject(new TimeoutError(label, ms)), ms);
+      }),
+    ]);
+  } finally {
+    // Without this the pending timer keeps the process alive for up to `ms`
+    // after a fast success, which would stall the CLI on every run.
+    if (timer !== undefined) clearTimeout(timer);
+  }
+}

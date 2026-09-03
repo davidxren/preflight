@@ -11,6 +11,13 @@ import type { Report } from "@/engine/types";
 export const EXPLAINER_MODEL = "claude-haiku-4-5";
 export const EXPLAINER_MAX_TOKENS = 400;
 
+/**
+ * Owner default for the explainer call (v1.1 D1). The SDK's own default is
+ * minutes long, which would hold a web request open behind an optional
+ * rephrasing; exceeding this falls back to the deterministic template.
+ */
+export const EXPLAINER_TIMEOUT_MS = 20_000;
+
 export const EXPLAINER_SYSTEM: string = [
   "You rewrite a pre-computed market-situation checklist into plain prose for a reader who is not a professional trader.",
   "",
@@ -56,12 +63,15 @@ export async function requestExplanation(
 ): Promise<Fetched<string>> {
   try {
     client ??= new Anthropic();
-    const response = await client.messages.create({
-      model: EXPLAINER_MODEL,
-      max_tokens: EXPLAINER_MAX_TOKENS,
-      system: EXPLAINER_SYSTEM,
-      messages: [{ role: "user", content: explainerPayload(report) }],
-    });
+    const response = await client.messages.create(
+      {
+        model: EXPLAINER_MODEL,
+        max_tokens: EXPLAINER_MAX_TOKENS,
+        system: EXPLAINER_SYSTEM,
+        messages: [{ role: "user", content: explainerPayload(report) }],
+      },
+      { timeout: EXPLAINER_TIMEOUT_MS, maxRetries: 0 },
+    );
     const text = response.content
       .filter((block): block is Anthropic.TextBlock => block.type === "text")
       .map((block) => block.text)
