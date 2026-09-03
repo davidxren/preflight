@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 /**
  * The report's fixed header. Kept apart from the page so the CLI-facing copy
  * and the web copy stay in one place as the report grows.
@@ -10,7 +12,13 @@ export function Masthead(): React.ReactElement {
         <span className="text-sm text-ink-muted">
           Situational checks before a trade
         </span>
-        <span className="figure ml-auto text-xs uppercase tracking-widest text-amber">
+        <Link
+          href="/methodology"
+          className="ml-auto text-sm text-ink-muted underline underline-offset-2 hover:text-ink"
+        >
+          Methodology
+        </Link>
+        <span className="figure text-xs uppercase tracking-widest text-amber">
           Checklist
         </span>
       </div>

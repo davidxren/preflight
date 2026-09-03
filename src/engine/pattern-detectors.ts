@@ -14,6 +14,12 @@ export interface PatternDetector {
   label: string;
   /** Bars of history required before `t`, so `t - lookback` is always valid. */
   lookback: number;
+  /**
+   * The trigger condition, exactly as specified. Carried on the detector so
+   * the methodology page states the same definition the code implements
+   * rather than a second copy that could drift from it.
+   */
+  definition: string;
   triggers: (bars: readonly DailyBar[], t: number) => boolean;
 }
 
@@ -68,20 +74,35 @@ export const PATTERN_DETECTORS: readonly PatternDetector[] = [
     id: "bullish-engulfing",
     label: "Bullish engulfing",
     lookback: 1,
+    definition: "C[t-1] < O[t-1] and C[t] > O[t] and O[t] <= C[t-1] and C[t] >= O[t-1]",
     triggers: bullishEngulfing,
   },
-  { id: "hammer", label: "Hammer", lookback: 0, triggers: hammer },
+  {
+    id: "hammer",
+    label: "Hammer",
+    lookback: 0,
+    definition: "lowerWick >= 2*body and upperWick <= body and body <= 0.4*range",
+    triggers: hammer,
+  },
   {
     id: "twenty-day-high-breakout",
     label: "20-day-high breakout close",
     lookback: 20,
+    definition: "C[t] > max(H[t-20 .. t-1])",
     triggers: twentyDayHighBreakout,
   },
-  { id: "gap-up-4pct", label: "Gap up 4% or more", lookback: 1, triggers: gapUp },
+  {
+    id: "gap-up-4pct",
+    label: "Gap up 4% or more",
+    lookback: 1,
+    definition: "O[t] >= C[t-1] * 1.04",
+    triggers: gapUp,
+  },
   {
     id: "three-up-closes",
     label: "Three consecutive up closes",
     lookback: 3,
+    definition: "C[t] > C[t-1] and C[t-1] > C[t-2] and C[t-2] > C[t-3]",
     triggers: threeUpCloses,
   },
 ] as const;

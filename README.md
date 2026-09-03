@@ -34,6 +34,10 @@ Checks 1–4 carry a fixed citation from the literature. Checks 5 and 6 measure
 this ticker's own history and a published government calendar, and name those
 sources instead.
 
+A `/methodology` page states how every check is computed, in plain English,
+with the five detector definitions and the fixed citations read straight from
+the engine so the page cannot drift from the code.
+
 ### Reading check 5
 
 Pattern statistics are easy to over-read, so check 5 states its own
