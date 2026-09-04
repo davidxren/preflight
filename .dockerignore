@@ -1,0 +1,9 @@
+node_modules
+.next
+.git
+.github
+*.db
+*.db-wal
+*.db-shm
+.env*
+tsconfig.tsbuildinfo

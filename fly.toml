@@ -1,0 +1,49 @@
+# Preflight on Fly.io. SQLite lives on a mounted volume, so the app must run on
+# a machine with a disk rather than on a serverless target.
+#
+# First deploy:
+#   fly launch --no-deploy --name <app>
+#   fly volumes create preflight_data --size 1 --region <region>
+#   fly deploy
+#
+# Secrets are set with `fly secrets set NAME=value` and never appear in this
+# file, the image, or a log line (v1.1 hard rule 10):
+#   fly secrets set TIINGO_API_KEY=... TRADIER_SANDBOX_TOKEN=... \
+#                   FINNHUB_API_KEY=... ANTHROPIC_API_KEY=...
+
+app = "preflight"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  # Live data stays opt-in in production too (hard rule 9). Switch a deployed
+  # app over with `fly secrets set PREFLIGHT_DATA=live` when the keys are set.
+  PREFLIGHT_DATA = "sample"
+  PREFLIGHT_DB_PATH = "/data/preflight.db"
+  PORT = "3000"
+
+[[mounts]]
+  source = "preflight_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = "suspend"
+  auto_start_machines = true
+  # One machine: the request-rate limit in D8 is per process, and the SQLite
+  # file is attached to a single volume.
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval = "30s"
+    method = "GET"
+    timeout = "5s"
+    path = "/"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

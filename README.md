@@ -138,6 +138,36 @@ template is used and that is not an error.
 | `FINNHUB_API_KEY` | Earnings fallback |
 | `ANTHROPIC_API_KEY` | Enables the explainer |
 
+## Deployment
+
+The app keeps its state in SQLite, so it needs a host with a persistent
+filesystem. It will not run on a serverless target as written.
+
+```bash
+docker build -t preflight .
+docker run -p 3000:3000 -v "$PWD/data:/data" preflight
+```
+
+The container migrates the database at startup and then serves on port 3000.
+It defaults to `PREFLIGHT_DATA=sample` and `PREFLIGHT_DB_PATH=/data/preflight.db`,
+so a container given no configuration serves committed snapshots and makes no
+network call.
+
+`fly.toml` deploys the same image to Fly.io with a volume mounted at `/data`
+and a health check on `/`:
+
+```bash
+fly volumes create preflight_data --size 1 --region <region>
+fly deploy
+```
+
+Keys are set with `fly secrets set NAME=value`. No key is ever baked into the
+image, written to the repository, or printed in a log line.
+
+Copy `.env.example` to `.env.local` for local configuration. Node 20 or newer
+is required. `.github/workflows/ci.yml` runs the lint, the build, and the test
+suite on every push.
+
 ## Development
 
 ```bash
