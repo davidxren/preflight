@@ -64,8 +64,9 @@ in the check-4 sizing calculator), "AI-powered predictions",
 
 These were ruled by the owner and override the original spec.
 
-1. **Persistence is exactly three tables** (was two): `cache`, `waitlist`,
-   `predictions`. `predictions` may hold exactly these nine columns and
+1. **Persistence is exactly four tables** (was two, then three): `cache`,
+   `waitlist`, `predictions`, `requests` (see amendment 6).
+   `predictions` may hold exactly these nine columns and
    nothing else (amendment 3 fixes the list to these literal names):
 
        base_close, confidence, created_at, direction, id,
@@ -103,6 +104,22 @@ These were ruled by the owner and override the original spec.
    Benjamini-Hochberg adjustment at a 5% false-discovery rate, disclosed in
    one sentence. Where the pattern is absent from more than 5% of resamples,
    both intervals render `Data unavailable` with that reason.
+6. **A request counter is permitted, and the table pin becomes four.** The
+   only analytics this app keeps. `requests` may hold only a timestamp, the
+   ticker, the action, and the data mode — no visitor id, no IP address, no
+   sizing input, no user agent — plus its own row id, so the literal column
+   list is:
+
+       action, created_at, id, mode, symbol
+
+   The counter is written by the web action in **both** data modes, because
+   production serves sample data and the point is to count production traffic.
+   The write is best-effort: a failure is logged and never blocks a report.
+   The CLI never writes it; `--stats` only reads, so running the CLI cannot
+   add to the number it reports. Consequently sample mode may open SQLite
+   through the web action. The "never probes the network in sample mode"
+   guarantee is unchanged and still asserted; the no-database property now
+   applies to the engine and CLI paths only.
 
 ## Ask-vs-decide
 

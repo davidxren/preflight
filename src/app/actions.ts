@@ -1,5 +1,6 @@
 "use server";
 
+import { recordRequest } from "@/db/request-counter";
 import { joinWaitlist } from "@/db/waitlist-store";
 import { toIsoDate } from "@/engine/calendar";
 import { explainReport } from "@/explainer/explain-report";
@@ -38,6 +39,11 @@ export async function createReport(
 
   const resolved = await resolveSnapshot(ticker);
   if (!resolved.ok) return { ok: false, error: resolved.reason };
+
+  // The only analytics kept (CLAUDE.md §10, amendment 6): four facts about the
+  // report, nothing about who asked. Best-effort, in both data modes, because
+  // production serves sample data. The CLI never writes it.
+  recordRequest({ symbol: ticker, action, mode: resolved.value.mode });
 
   const report = buildReport({
     snapshot: resolved.value.snapshot,

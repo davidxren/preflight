@@ -15,6 +15,13 @@
       "when": 1787950885728,
       "tag": "0001_unique_ben_urich",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1788486116016,
+      "tag": "0002_robust_flatman",
+      "breakpoints": true
     }
   ]
 }

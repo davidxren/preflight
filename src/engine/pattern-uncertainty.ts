@@ -109,8 +109,8 @@ export interface UncertaintyOptions {
 /**
  * Two thousand resamples over a decade of bars costs seconds, and a report is
  * rebuilt on every submission. The result is a pure function of the series and
- * a fixed seed, so it is memoised in process — no new table, nothing persisted,
- * and sample mode still never opens the database.
+ * a fixed seed, so it is memoised in process — nothing is persisted and no
+ * table is involved.
  */
 const MEMO_LIMIT = 8;
 const memo = new Map<string, UncertainStat[]>();

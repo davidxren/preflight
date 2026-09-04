@@ -2,11 +2,11 @@ import { sql } from "drizzle-orm";
 import { index, integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 /**
- * The core app persists two tables (CLAUDE.md §10): `cache` and `waitlist`.
- * `predictions` is added by the calibration practice mode and holds an
- * anonymous cookie id, never an account or an email. Nothing here holds
- * user-entered sizing numbers or any other personal data beyond a waitlist
- * email the visitor typed on purpose.
+ * Exactly four application tables (CLAUDE.md §10, as amended): `cache`,
+ * `waitlist`, `predictions`, and `requests`. `predictions` holds an anonymous
+ * cookie id, never an account or an email; `requests` holds no identifier at
+ * all. Nothing here holds user-entered sizing numbers or any other personal
+ * data beyond a waitlist email the visitor typed on purpose.
  */
 
 /** Cached live responses, keyed by source and symbol. */
@@ -68,6 +68,28 @@ export const predictions = sqliteTable(
   (table) => [index("predictions_visitor_idx").on(table.visitorId)],
 );
 
+/**
+ * The request counter (CLAUDE.md §10, owner amendment 6) — the only analytics
+ * this app keeps. Four facts about a report that was built, and nothing that
+ * could identify who asked for it: no visitor id, no IP address, no sizing
+ * input, no user agent.
+ */
+export const requests = sqliteTable(
+  "requests",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    createdAt: integer("created_at")
+      .notNull()
+      .default(sql`(unixepoch() * 1000)`),
+    symbol: text("symbol").notNull(),
+    action: text("action").notNull(),
+    /** "sample" or "live": which data the report was actually built from. */
+    mode: text("mode").notNull(),
+  },
+  (table) => [index("requests_created_at_idx").on(table.createdAt)],
+);
+
 export type CacheRow = typeof cache.$inferSelect;
 export type WaitlistRow = typeof waitlist.$inferSelect;
 export type PredictionRow = typeof predictions.$inferSelect;
+export type RequestRow = typeof requests.$inferSelect;

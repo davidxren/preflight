@@ -113,10 +113,22 @@ reason — it never substitutes a number of its own.
 npm run db:migrate
 ```
 
-Three tables: `cache` (live responses), `waitlist` (emails), and `predictions`
-(calibration practice — an anonymous cookie id, the forecast, and its outcome).
-User-entered sizing numbers are never written anywhere, and no table links a
-row to a person.
+Four tables: `cache` (live responses), `waitlist` (emails), `predictions`
+(calibration practice — an anonymous cookie id, the forecast, and its outcome),
+and `requests` (the request counter). User-entered sizing numbers are never
+written anywhere.
+
+`requests` is the only analytics kept. It records a timestamp, the ticker, the
+action and the data mode for each report built from the web app, and nothing
+about who asked — no visitor id, no IP address, no user agent. The write is
+best-effort and never blocks a report.
+
+```bash
+npx tsx scripts/preflight-cli.ts --stats
+```
+
+prints the counts. The command line never writes to the counter, so building a
+report from a terminal does not change the number and `--stats` only reads.
 
 ## Explainer (optional)
 

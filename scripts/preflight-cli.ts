@@ -10,6 +10,7 @@
  * document; warnings and the gate G1 line go to stderr.
  */
 import { pathToFileURL } from "node:url";
+import { requestCounts } from "@/db/request-counter";
 import { toIsoDate } from "@/engine/calendar";
 import { buildReport } from "@/engine/report";
 import { renderReportText } from "@/engine/report-text";
@@ -34,6 +35,7 @@ Actions: ${TRADE_ACTIONS.join(", ")}
 Options:
   --json                 Emit the report as JSON on stdout, nothing else.
   --date=YYYY-MM-DD      Build the report for this date (default: today).
+  --stats                Print the request counter and exit. Reads only.
   --help                 Show this message.
 
 Check 4 sizing (all five required together; fractions, not percentages):
@@ -144,9 +146,41 @@ function wantsHelp(argv: readonly string[]): boolean {
   return argv.includes("--help") || argv.includes("-h");
 }
 
+/**
+ * Prints the request counter (CLAUDE.md §10, amendment 6). It only reads:
+ * running the CLI never adds to the count it reports, so the number describes
+ * web traffic rather than the act of asking about it.
+ */
+function printStats(): void {
+  const counts = requestCounts();
+  console.log(`Reports built: ${counts.total}`);
+  if (counts.total === 0) {
+    console.log("No reports have been recorded in this database yet.");
+    return;
+  }
+  const stamp = (ms: number | null): string =>
+    ms === null ? "n/a" : new Date(ms).toISOString();
+  console.log(`First: ${stamp(counts.firstAt)}`);
+  console.log(`Last:  ${stamp(counts.lastAt)}`);
+  for (const [heading, rows] of [
+    ["By data mode", counts.byMode],
+    ["By ticker", counts.bySymbol],
+    ["By action", counts.byAction],
+  ] as const) {
+    console.log(`\n${heading}`);
+    for (const row of rows) {
+      console.log(`  ${row.key.padEnd(14)} ${row.count}`);
+    }
+  }
+}
+
 async function main(): Promise<void> {
   if (wantsHelp(process.argv.slice(2))) {
     console.log(USAGE);
+    return;
+  }
+  if (process.argv.slice(2).includes("--stats")) {
+    printStats();
     return;
   }
   const args = parseArgs(process.argv.slice(2));
