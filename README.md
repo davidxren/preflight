@@ -130,6 +130,21 @@ npx tsx scripts/preflight-cli.ts --stats
 prints the counts. The command line never writes to the counter, so building a
 report from a terminal does not change the number and `--stats` only reads.
 
+## Limits
+
+Live-mode reports are limited to 10 a minute per client address, held in an
+in-memory token bucket. That is enough for a single machine with one volume,
+which is what `fly.toml` deploys; a second machine would allow the full rate
+each, and the limit would have to move to a shared store first. Sample-mode
+reports are not limited: they reach no upstream source.
+
+Calibration practice keeps at most 20 unsettled forecasts per visitor. The
+waitlist has a unique index on the email column, and a repeat sign-up is
+reported as already joined without writing a second row.
+
+Every over-limit response is a sentence describing the limit. None of them
+returns a report or a figure.
+
 ## Explainer (optional)
 
 If `ANTHROPIC_API_KEY` is set, the report's plain-language summary is

@@ -6,6 +6,11 @@ import { visitorId } from "@/calibration/visitor-cookie";
 import type { Direction } from "@/calibration/brier";
 import { resolveSnapshot } from "@/market/snapshot-source";
 import { addTradingSessions } from "@/engine/trading-calendar";
+import {
+  MAX_UNSETTLED_PREDICTIONS,
+  atUnsettledLimit,
+  unsettledLimitMessage,
+} from "@/limits/request-limits";
 import { HORIZON_SESSIONS } from "@/calibration/prediction-store";
 
 /**
@@ -60,6 +65,17 @@ export async function submitPrediction(
   }
 
   const id = await visitorId();
+
+  // A visitor may hold only so many forecasts waiting to settle (v1.1 D8), so
+  // the table cannot be grown without bound from one cookie.
+  const view = resolveAndSummarize(id, symbol, bars);
+  if (atUnsettledLimit(view.pending)) {
+    return {
+      ok: false,
+      error: unsettledLimitMessage(MAX_UNSETTLED_PREDICTIONS),
+    };
+  }
+
   const resolveAfter = addTradingSessions(asOf, HORIZON_SESSIONS);
   recordPrediction({
     visitorId: id,

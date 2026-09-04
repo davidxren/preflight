@@ -1,12 +1,13 @@
 "use server";
 
 import { recordRequest } from "@/db/request-counter";
+import { callerAddress, takeLiveReport } from "@/limits/request-limits";
 import { joinWaitlist } from "@/db/waitlist-store";
 import { toIsoDate } from "@/engine/calendar";
 import { explainReport } from "@/explainer/explain-report";
 import { buildReport } from "@/engine/report";
 import { isTradeAction, type Report, type SizingInputs } from "@/engine/types";
-import { resolveSnapshot } from "@/market/snapshot-source";
+import { dataMode, resolveSnapshot } from "@/market/snapshot-source";
 
 /**
  * Server actions. Everything arriving here is untrusted, so the ticker, the
@@ -35,6 +36,16 @@ export async function createReport(
       ok: false,
       error: `"${action}" is not one of: buy shares, buy call, buy put.`,
     };
+  }
+
+  // Live mode reaches an upstream source, so it is rate limited per address
+  // (v1.1 D8). Sample mode is not: it reaches nothing upstream, and limiting
+  // it would break the app for everyone behind one shared proxy address.
+  if (dataMode() === "live") {
+    const limit = takeLiveReport(await callerAddress());
+    if (!limit.allowed) {
+      return { ok: false, error: limit.message ?? "Too many requests." };
+    }
   }
 
   const resolved = await resolveSnapshot(ticker);
