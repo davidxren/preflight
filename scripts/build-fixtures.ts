@@ -4,10 +4,14 @@
  * committed JSON is what sample mode reads, so the app itself never needs the
  * network (CLAUDE.md §9: never call any network in sample mode).
  *
- * Usage: npx tsx scripts/build-fixtures.ts [SYMBOL ...]
+ * Gate G1 is checked first, and nothing is written unless every symbol was
+ * captured: a half-refreshed fixture set would mix two as-of dates.
+ *
+ * Usage: npm run fixtures:refresh [-- SYMBOL ...]
  */
 import { writeFileSync } from "node:fs";
 import { toIsoDate } from "@/engine/calendar";
+import { GATE_G1_FAILED, probePrimarySource } from "@/market/snapshot-source";
 import {
   fetchDailyBars,
   fetchDayGainers,
@@ -87,18 +91,43 @@ async function main(): Promise<void> {
     ? process.argv.slice(2).map((s) => s.toUpperCase())
     : DEFAULT_SYMBOLS;
 
+  // Gate G1 before anything is captured, so an unreachable source leaves the
+  // committed fixtures exactly as they were.
+  const gate = await probePrimarySource();
+  if (gate !== null) {
+    console.error(`${GATE_G1_FAILED}\nReason: ${gate}`);
+    console.error("Fixtures were left untouched.");
+    process.exitCode = 1;
+    return;
+  }
+
   const gainersResult = await fetchDayGainers(50);
   const gainers = gainersResult.ok ? gainersResult.value : null;
   if (!gainersResult.ok) {
     console.warn(`[fixtures] day gainers: ${gainersResult.reason}`);
   }
 
+  // Captured in full first: a symbol that fails part-way must not leave the
+  // set split across two as-of dates.
+  const captured: { symbol: string; snapshot: MarketSnapshot }[] = [];
   for (const symbol of symbols) {
     const snapshot = await capture(
       symbol,
       gainers,
       gainersResult.ok ? undefined : gainersResult.reason,
     );
+    if (snapshot.bars.length === 0) {
+      console.error(
+        `[fixtures] ${symbol}: no price history (${snapshot.unavailable.bars ?? "no reason given"}).`,
+      );
+      console.error("Fixtures were left untouched.");
+      process.exitCode = 1;
+      return;
+    }
+    captured.push({ symbol, snapshot });
+  }
+
+  for (const { symbol, snapshot } of captured) {
     const path = `src/fixtures/${symbol.toLowerCase()}.json`;
     writeFileSync(path, `${JSON.stringify(snapshot, null, 2)}\n`);
     console.log(
@@ -108,6 +137,9 @@ async function main(): Promise<void> {
         `unavailable [${Object.keys(snapshot.unavailable).join(", ") || "none"}]`,
     );
   }
+
+  const asOfDates = [...new Set(captured.map((c) => c.snapshot.asOf ?? "unknown"))];
+  console.log(`\n[fixtures] refreshed ${captured.length}; as of ${asOfDates.join(", ")}`);
 }
 
 main().catch((error) => {

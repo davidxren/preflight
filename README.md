@@ -178,9 +178,19 @@ npm test
 npm run build
 ```
 
-Fixtures are captured snapshots, regenerated with
-`npx tsx scripts/build-fixtures.ts`. The committed JSON is what sample mode
-reads; the app itself never calls the network in sample mode.
+Fixtures are captured snapshots. The committed JSON is what sample mode reads;
+the app itself never calls the network in sample mode.
+
+```bash
+npm run fixtures:refresh
+```
+
+recaptures all four and prints the new as-of date. It checks gate G1 first and
+writes nothing unless every symbol captured, so an unreachable source prints
+`GATE FAILED: live data unreachable` and leaves the committed fixtures exactly
+as they were. A test asserts each snapshot's internal consistency: bars in
+order, any earnings date at or after the as-of date, every option expiry
+strictly after it, and a recorded reason behind every empty field.
 
 ```bash
 npm run capture:live
