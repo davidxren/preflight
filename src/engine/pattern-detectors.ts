@@ -118,3 +118,23 @@ export function triggerIndices(
   }
   return out;
 }
+
+/**
+ * The same scan, written into a caller-owned buffer, returning how many
+ * indices were written. The bootstrap runs this ten thousand times and the
+ * throwaway arrays cost more than the scan itself; nothing else needs it.
+ */
+export function triggerIndicesInto(
+  detector: PatternDetector,
+  bars: readonly DailyBar[],
+  out: Int32Array,
+): number {
+  let count = 0;
+  for (let t = detector.lookback; t < bars.length; t += 1) {
+    if (detector.triggers(bars, t)) {
+      out[count] = t;
+      count += 1;
+    }
+  }
+  return count;
+}

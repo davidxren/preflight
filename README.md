@@ -58,6 +58,11 @@ uncertainty:
 - Where the pattern is absent from more than 5% of resamples, both intervals
   render `Data unavailable` with that reason rather than describing only the
   resamples that happened to contain it.
+- Under each horizon the same occurrences are also split three ways, by the
+  tercile of this ticker's trailing 60-session realized volatility each one
+  began in. Those rows read median, then N and the non-overlapping count in
+  brackets. They carry no interval, and occurrences from before a full
+  volatility window exists belong to no tercile.
 
 ## Command line
 

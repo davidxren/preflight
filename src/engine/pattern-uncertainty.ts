@@ -7,7 +7,12 @@ import {
   stationaryBlockIndices,
   twoSidedPValue,
 } from "./block-bootstrap";
-import { PATTERN_DETECTORS, triggerIndices, type PatternDetector } from "./pattern-detectors";
+import {
+  PATTERN_DETECTORS,
+  triggerIndices,
+  triggerIndicesInto,
+  type PatternDetector,
+} from "./pattern-detectors";
 import { allForwardReturns, forwardReturn, median } from "./price-series";
 import { barBuffer, rebuildPath, toRelativeBars } from "./relative-bars";
 import {
@@ -205,6 +210,7 @@ export function patternUncertainty(
     // Scratch reused across every resample: two thousand passes would
     // otherwise allocate and sort millions of short-lived array elements.
     const scratch = new Float64Array(pathLength);
+    const triggerBuffer = new Int32Array(pathLength);
     const unconditional = new Array<number | null>(horizons.length);
 
     for (let r = 0; r < resamples; r += 1) {
@@ -215,11 +221,12 @@ export function patternUncertainty(
         unconditional[h] = unconditionalMedianFast(buffer, horizons[h], scratch);
       }
       for (let d = 0; d < detectors.length; d += 1) {
-        const triggers = triggerIndices(detectors[d], buffer);
+        const triggerCount = triggerIndicesInto(detectors[d], buffer, triggerBuffer);
         for (let h = 0; h < horizons.length; h += 1) {
           const conditional = conditionalMedianFast(
             buffer,
-            triggers,
+            triggerBuffer,
+            triggerCount,
             horizons[h],
             scratch,
           );

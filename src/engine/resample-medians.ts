@@ -75,15 +75,21 @@ export function unconditionalMedianFast(
   return medianOfScratch(scratch, count);
 }
 
-/** Median forward return over the resampled path's occurrences of a pattern. */
+/**
+ * Median forward return over the resampled path's occurrences of a pattern.
+ * `triggerCount` bounds the live prefix of `triggers`, which the caller reuses
+ * across resamples rather than reallocating.
+ */
 export function conditionalMedianFast(
   bars: readonly DailyBar[],
-  triggers: readonly number[],
+  triggers: Int32Array,
+  triggerCount: number,
   horizon: number,
   scratch: Float64Array,
 ): number | null {
   let count = 0;
-  for (const t of triggers) {
+  for (let i = 0; i < triggerCount; i += 1) {
+    const t = triggers[i];
     const target = t + horizon;
     if (target >= bars.length) continue;
     const from = bars[t].close;

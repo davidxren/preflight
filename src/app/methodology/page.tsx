@@ -3,6 +3,7 @@ import Link from "next/link";
 import { DisclaimerBlock } from "../disclaimer-block";
 import { Masthead } from "../masthead";
 import { MEAN_BLOCK_SESSIONS, RESAMPLES } from "@/engine/block-bootstrap";
+import { REGIME_LOOKBACK_SESSIONS } from "@/engine/volatility-regime";
 import { CITATIONS, PATTERN_SOURCE_NOTE } from "@/engine/citations";
 import { FALSE_DISCOVERY_RATE } from "@/engine/false-discovery";
 import { MACRO_SOURCE_URLS } from "@/data/macro";
@@ -186,6 +187,27 @@ export default function Methodology(): React.ReactElement {
             {(FALSE_DISCOVERY_RATE * 100).toFixed(0)}%, reported in one
             sentence on the check. That sentence describes the sample that was
             measured and nothing beyond it.
+          </p>
+        </Section>
+
+        <Section heading="Check 5 by volatility regime">
+          <p>
+            Under each horizon, the same occurrences are also split three ways
+            by the tercile of this ticker&rsquo;s trailing{" "}
+            {REGIME_LOOKBACK_SESSIONS}-session realized volatility that each
+            one began in, so a pattern&rsquo;s figures can be read separately in
+            the calm, ordinary and turbulent parts of its own past. The
+            terciles are cut from this ticker&rsquo;s own readings, not from a
+            threshold chosen elsewhere.
+          </p>
+          <p>
+            Each row reads median, then the number of occurrences and the
+            non-overlapping count in brackets. Occurrences from the opening
+            sessions, before a full volatility window exists, belong to no
+            tercile and are counted in none of the three. These rows carry no
+            interval: they are point estimates over thinner samples than the
+            headline figures, and the non-overlapping count next to each is
+            what says how thin.
           </p>
         </Section>
 

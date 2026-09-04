@@ -25,6 +25,21 @@ import {
   median,
   percentPositive,
 } from "./price-series";
+import {
+  REGIME_NOTE,
+  regimeContext,
+  regimeFigures,
+  regimeStats,
+} from "./pattern-regimes";
+import {
+  HORIZONS,
+  SMALL_SAMPLE_THRESHOLD,
+  smallSampleWarning,
+} from "./pattern-sample-size";
+
+// Re-exported because it is check 5's wording, and the check is where callers
+// and tests look for it.
+export { smallSampleWarning };
 import type { CheckResult, Figure } from "./types";
 
 /**
@@ -35,9 +50,6 @@ import type { CheckResult, Figure } from "./types";
  * time regardless, and less still if the interval around 55% is wide.
  */
 
-/** Below this many independent triggers the numbers are too thin to read, per §12. */
-const SMALL_SAMPLE_THRESHOLD = 30;
-const HORIZONS = [5, 20] as const;
 
 export interface HorizonStats {
   horizon: number;
@@ -63,11 +75,6 @@ export interface PatternBaseRate {
   independentSampleSize: number;
   horizons: HorizonStats[];
   smallSampleWarning: string | null;
-}
-
-/** The exact wording required by §12 when a sample is thin. */
-export function smallSampleWarning(n: number): string {
-  return `Small sample — read with caution (N=${n})`;
 }
 
 function statsFor(
@@ -245,9 +252,17 @@ export function checkPatternBaseRates(snapshot: MarketSnapshot): CheckResult {
   const rates = patternBaseRates(bars);
   const stats = patternUncertainty(bars);
   const figures: Figure[] = [];
+  let anyRegimeRows = false;
+  // Measured once for the whole report rather than once per detector.
+  const regimes0 = regimeContext(bars);
   for (const rate of rates) {
+    const detector = PATTERN_DETECTORS.find((d) => d.id === rate.id)!;
+    const regimes = regimeStats(detector, bars, regimes0);
     for (const h of rate.horizons) {
       figures.push(...horizonFigures(rate, h, statFor(stats, rate.id, h.horizon)));
+      const rows = regimeFigures(rate.label, h.horizon, regimes);
+      if (rows.length > 0) anyRegimeRows = true;
+      figures.push(...rows);
     }
     if (rate.smallSampleWarning) figures.push(figure(rate.label, rate.smallSampleWarning));
   }
@@ -270,6 +285,7 @@ export function checkPatternBaseRates(snapshot: MarketSnapshot): CheckResult {
       "same series, which is what the series did on an average day.",
   );
   notes.push(METHOD_NOTE);
+  if (anyRegimeRows) notes.push(REGIME_NOTE);
   notes.push(
     `${adjustment}. The adjustment holds the false-discovery rate across those ` +
       "statistics to 5%; it describes this sample and says nothing about what " +
